@@ -62,14 +62,12 @@ const SoftwareAppStoreAndroid = ({
     try {
       const {
         software_title_id: softwareAppStoreTitleId,
-        // Maybe this will return name and can render success message with the name?
         name: softwareTitleName,
       } = await softwareAPI.addAppStoreApp(currentTeamId, formData);
 
       renderFlash(
         "success",
         <>
-          {/* <strong>{appApiRes.data.name}</strong> successfully added. */}
           <strong>{softwareTitleName || "Android app"}</strong> successfully
           added.
         </>,
