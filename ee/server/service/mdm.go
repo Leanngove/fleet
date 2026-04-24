@@ -940,10 +940,11 @@ func (svc *Service) mdmSSOHandleCallbackAuth(
 	}
 
 	serverURL := appConfig.MDMUrl()
-	acsURL, err := url.Parse(serverURL + svc.config.Server.URLPrefix + "/api/v1/fleet/mdm/sso/callback")
+	acsURL, err := url.Parse(serverURL)
 	if err != nil {
 		return "", "", "", "", sso.SSORequestData{}, ctxerr.Wrap(ctx, err, "failed to parse ACS URL")
 	}
+	acsURL = acsURL.JoinPath(svc.config.Server.URLPrefix, "/api/v1/fleet/mdm/sso/callback")
 
 	mdmSSOSettings := appConfig.MDM.EndUserAuthentication.SSOProviderSettings
 
@@ -958,8 +959,8 @@ func (svc *Service) mdmSSOHandleCallbackAuth(
 
 	expectedAudiences := []string{
 		mdmSSOSettings.EntityID,
-		appConfig.MDMUrl(),
-		appConfig.MDMUrl() + svc.config.Server.URLPrefix + "/api/v1/fleet/mdm/sso/callback",
+		serverURL,
+		acsURL.String(),
 	}
 	session, err := svc.ssoSessionStore.Fullfill(sessionID)
 	if err != nil {
@@ -970,12 +971,16 @@ func (svc *Service) mdmSSOHandleCallbackAuth(
 	var ssoErr error
 	if appConfig.MDM.AppleServerURL != "" {
 		// check for both apple server URL and default
-		expectedAudiences = append(expectedAudiences, appConfig.ServerSettings.ServerURL, appConfig.ServerSettings.ServerURL+svc.config.Server.URLPrefix+"/api/v1/fleet/mdm/sso/callback")
-
-		acsURL, err := url.Parse(appConfig.ServerSettings.ServerURL + svc.config.Server.URLPrefix + "/api/v1/fleet/mdm/sso/callback")
+		acsURL, err := url.Parse(appConfig.ServerSettings.ServerURL)
 		if err != nil {
 			return "", "", "", "", sso.SSORequestData{}, ctxerr.Wrap(ctx, err, "failed to parse ACS URL with server URL")
 		}
+		acsURL = acsURL.JoinPath(svc.config.Server.URLPrefix, "/api/v1/fleet/mdm/sso/callback")
+
+		expectedAudiences = append(expectedAudiences,
+			appConfig.ServerSettings.ServerURL,
+			acsURL.String(),
+		)
 
 		samlProvider, requestID, authOriginalURL, authSSORequestData, err := sso.SAMLProviderFromSession(
 			ctx, session, acsURL, mdmSSOSettings.EntityID, expectedAudiences,
